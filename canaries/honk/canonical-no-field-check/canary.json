@@ -1,0 +1,8 @@
+{
+  "id": "honk-canonical-no-field-check",
+  "pack": "honk",
+  "target": "canonical-no-field-check",
+  "snapshot_sha": "d82fda6fc08370dfeef3a63df94de16fcf5584a2",
+  "links": ["https://github.com/Sunny-Goes/aztec-packages"],
+  "notes": "Seeded dev-target canary on the aztec-packages fork — see README.md."
+}

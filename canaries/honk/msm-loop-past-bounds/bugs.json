@@ -1,0 +1,10 @@
+[
+  {
+    "id": "msm-loop-past-bounds",
+    "files": ["BaseHonkVerifier.sol"],
+    "severity": "critical",
+    "win": "direct-unconstrained-exploitability",
+    "source": "seeded — Sunny-Goes/aztec-packages fork",
+    "notes": "BaseHonkVerifier.sol:batchMul — the MSM loop runs one iteration past the arrays' bound."
+  }
+]

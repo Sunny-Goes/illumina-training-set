@@ -1,0 +1,10 @@
+[
+  {
+    "id": "publicinputs-field-check-missing",
+    "files": ["Transcript.sol"],
+    "severity": "critical",
+    "win": "direct-unconstrained-exploitability",
+    "source": "seeded — Sunny-Goes/aztec-packages fork",
+    "notes": "Transcript.sol:generateEtaChallenge — the require(publicInputs[i] < P) canonical check is gone."
+  }
+]

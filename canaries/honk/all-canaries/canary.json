@@ -1,0 +1,8 @@
+{
+  "id": "honk-all-canaries",
+  "pack": "honk",
+  "target": "all-canaries",
+  "snapshot_sha": "587c986cb5ca3002343885056f0d198c9d39a107",
+  "links": ["https://github.com/Sunny-Goes/aztec-packages"],
+  "notes": "Seeded dev-target canary on the aztec-packages fork — all three seeded bugs at once; see README.md."
+}

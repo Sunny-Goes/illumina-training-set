@@ -1,0 +1,10 @@
+[
+  {
+    "id": "ecmul-success-unchecked",
+    "files": ["utils.sol"],
+    "severity": "critical",
+    "win": "direct-unconstrained-exploitability",
+    "source": "seeded — Sunny-Goes/aztec-packages fork",
+    "notes": "utils.sol:ecMul — the ecMul staticcall's success flag is no longer checked."
+  }
+]

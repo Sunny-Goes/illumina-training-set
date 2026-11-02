@@ -1,0 +1,8 @@
+{
+  "id": "honk-msm-loop-past-bounds",
+  "pack": "honk",
+  "target": "msm-loop-past-bounds",
+  "snapshot_sha": "9b3918484a0adc9c9080764f49170715150ce8ab",
+  "links": ["https://github.com/Sunny-Goes/aztec-packages"],
+  "notes": "Seeded dev-target canary on the aztec-packages fork — see README.md."
+}

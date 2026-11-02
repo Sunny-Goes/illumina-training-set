@@ -1,0 +1,26 @@
+[
+  {
+    "id": "publicinputs-field-check-missing",
+    "files": ["Transcript.sol"],
+    "severity": "critical",
+    "win": "direct-unconstrained-exploitability",
+    "source": "seeded — Sunny-Goes/aztec-packages fork",
+    "notes": "Transcript.sol:generateEtaChallenge — the require(publicInputs[i] < P) canonical check is gone."
+  },
+  {
+    "id": "ecmul-success-unchecked",
+    "files": ["utils.sol"],
+    "severity": "critical",
+    "win": "direct-unconstrained-exploitability",
+    "source": "seeded — Sunny-Goes/aztec-packages fork",
+    "notes": "utils.sol:ecMul — the ecMul staticcall's success flag is no longer checked."
+  },
+  {
+    "id": "msm-loop-past-bounds",
+    "files": ["BaseHonkVerifier.sol"],
+    "severity": "critical",
+    "win": "direct-unconstrained-exploitability",
+    "source": "seeded — Sunny-Goes/aztec-packages fork",
+    "notes": "BaseHonkVerifier.sol:batchMul — the MSM loop runs one iteration past the arrays' bound."
+  }
+]

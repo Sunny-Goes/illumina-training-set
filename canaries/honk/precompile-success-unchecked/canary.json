@@ -1,0 +1,8 @@
+{
+  "id": "honk-precompile-success-unchecked",
+  "pack": "honk",
+  "target": "precompile-success-unchecked",
+  "snapshot_sha": "13060089504cfcdc92e74a9992a3e64f3c4b0e91",
+  "links": ["https://github.com/Sunny-Goes/aztec-packages"],
+  "notes": "Seeded dev-target canary on the aztec-packages fork — see README.md."
+}
