@@ -43,6 +43,18 @@ same snapshot with X's fix applied — no LLM, no line matching):
 These fields are **judge-side ground truth**: `canary.json` is unchanged, execution stages never
 see them, and `fixes/` / `reference/` live outside every fetched sparse path, like `bugs.json`.
 
+## Certification (CI)
+
+`ci/certify.sh <canary-dir>` certifies every bug carrying `fix` + `reference_poc`: the reference
+exploit must win on the vulnerable snapshot and die on the fixed variant (the lab's
+`illumina-lab counterfactual` verdict must be `confirmed`). It reconstructs a Foundry
+workspace from the canary data alone (sparse, blob-filtered fetch of the snapshot + forge-std at
+the pinned rev) and replays on scratch copies — no archived artifacts needed, no LLM. The GitHub
+workflow `.github/workflows/certify.yml` runs it on changes to `canaries/**` or `ci/**` and makes
+ground truth a validated artifact instead of curation prose. Locally, `CERTIFY_WORKSPACE=<dir>`
+skips reconstruction for a fast check against an existing PoC workspace; `LAB_CMD` overrides how
+the lab CLI is invoked (e.g. `uv run --directory /path/to/illumina-lab illumina-lab`).
+
 ## The rules
 
 - **Coexistence is proven, not trusted.** Every bug's pre-fix hunk must appear verbatim at the snapshot commit — checked mechanically, per bug.

@@ -1,0 +1,25 @@
+name: certify
+
+# Certifies every canary bug that carries a fix + reference PoC: the reference exploit must win
+# on the vulnerable snapshot and die on the fixed variant. Ground truth is a validated artifact,
+# not curation prose — a red job means the canary (or the judge), never the detector.
+on:
+  push:
+    branches: [main]
+    paths: ['canaries/**', 'ci/**', '.github/workflows/certify.yml']
+  pull_request:
+    paths: ['canaries/**', 'ci/**', '.github/workflows/certify.yml']
+  workflow_dispatch:
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: foundry-rs/foundry-toolchain@v1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # TODO: switch to @master once the lab's judge/counterfactual-poc branch merges.
+      - run: pip install "git+https://github.com/Sunny-Goes/illumina-lab.git@judge/counterfactual-poc"
+      - run: ci/certify.sh canaries/honk/precompile-success-unchecked
