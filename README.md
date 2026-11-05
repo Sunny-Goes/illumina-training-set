@@ -22,6 +22,27 @@ A canary is one codebase at one commit. Snapshots group under `canaries/<codebas
 so a codebase can carry several snapshots — e.g. when no single commit has all its
 known bugs coexisting, each snapshot carries the subset that does.
 
+## Bug entries v2 — counterfactual ground truth
+
+Bug entries may carry additional optional fields supporting the lab's **counterfactual judge**
+(an agent's PoC is attributed to bug X when it wins on the vulnerable snapshot and *fails* on the
+same snapshot with X's fix applied — no LLM, no line matching):
+
+- `fix` — path to a patch (relative to the canary dir) that repairs **only this bug** and applies
+  cleanly at the snapshot (`git apply --check`). For seeded canaries this is the revert of the seed
+  commit, restricted to the bug's files; for historical canaries, the fix commit's diff, backported
+  if needed. Fixes must be independently applicable on multi-bug snapshots.
+- `sites` — optional list of `{file, lines, kind, function}` locating the bug at the snapshot for
+  detection-level grading and coverage prefiltering. `lines` are 1-based inclusive ranges at the
+  snapshot. `kind`: `modified`/`deleted` (lines the fix changes or removes) or `context` (the fix
+  only *adds* code — e.g. a missing check — so the site is the unguarded region around the
+  insertion point). `function` is the enclosing function when known.
+- `reference_poc` — optional path to a curated, known-good exploit used to certify the canary
+  (wins on vulnerable, fails on patched) and to self-test the judge.
+
+These fields are **judge-side ground truth**: `canary.json` is unchanged, execution stages never
+see them, and `fixes/` / `reference/` live outside every fetched sparse path, like `bugs.json`.
+
 ## The rules
 
 - **Coexistence is proven, not trusted.** Every bug's pre-fix hunk must appear verbatim at the snapshot commit — checked mechanically, per bug.

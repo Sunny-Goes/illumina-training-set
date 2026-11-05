@@ -1,0 +1,15 @@
+diff --git a/barretenberg/sol/src/honk/utils.sol b/barretenberg/sol/src/honk/utils.sol
+index 2bbe512..baac903 100644
+--- a/barretenberg/sol/src/honk/utils.sol
++++ b/barretenberg/sol/src/honk/utils.sol
+@@ -169,6 +169,10 @@ function ecMul(Fr value, Honk.G1Point memory point) view returns (Honk.G1Point m
+         mstore(out, 0)
+         mstore(add(out, 0x20), 0)
+         let success := staticcall(gas(), 0x07, free, 0x60, out, 0x40)
++        if iszero(success) {
++            // TODO: meaningful error
++            revert(0, 0)
++        }
+         // Copy the result of the multiplication back into the result memory location.
+         // Memory layout:
+         // Address    |  value

@@ -2,9 +2,18 @@
   {
     "id": "ecmul-success-unchecked",
     "files": ["utils.sol"],
+    "sites": [
+      {
+        "file": "utils.sol",
+        "lines": [[166, 178]],
+        "kind": "context",
+        "function": "ecMul"
+      }
+    ],
     "severity": "critical",
     "win": "direct-unconstrained-exploitability",
-    "source": "seeded — Sunny-Goes/aztec-packages fork",
+    "fix": "fixes/ecmul-success-unchecked.patch",
+    "source": "seeded — Sunny-Goes/aztec-packages fork (seed commit 4fcb3d6; the fix reverts it)",
     "notes": "utils.sol:ecMul — the ecMul staticcall's success flag is no longer checked."
   }
 ]
