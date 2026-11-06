@@ -1,0 +1,48 @@
+diff --git a/packages/contracts/contracts/Stargate.sol b/packages/contracts/contracts/Stargate.sol
+index 50818d5..0927133 100644
+--- a/packages/contracts/contracts/Stargate.sol
++++ b/packages/contracts/contracts/Stargate.sol
+@@ -755,14 +755,14 @@ contract Stargate is
+         }
+ 
+         uint256 claimableAmount = _claimableRewards($, _tokenId, 0);
++        $.lastClaimedPeriod[_tokenId] = lastClaimablePeriod;
++
+         if (claimableAmount == 0) {
+             return;
+         }
+ 
+         address tokenOwner = $.stargateNFTContract.ownerOf(_tokenId);
+ 
+-        $.lastClaimedPeriod[_tokenId] = lastClaimablePeriod;
+-
+         VTHO_TOKEN.safeTransfer(tokenOwner, claimableAmount);
+ 
+         emit DelegationRewardsClaimed(
+@@ -902,8 +902,16 @@ contract Stargate is
+         // the current period is the one that is not completed yet
+         uint32 currentValidatorPeriod = completedPeriods + 1;
+ 
++        uint32 lastClaimedPeriod = $.lastClaimedPeriod[_tokenId];
++
++        // if the last claimed period is the same as the end period
++        // means this delegation has already been claimed so we return 0,0
++        if (endPeriod <= lastClaimedPeriod) {
++            return (0, 0);
++        }
++
+         // next claimable period is the last claimed period + 1
+-        uint32 nextClaimablePeriod = $.lastClaimedPeriod[_tokenId] + 1;
++        uint32 nextClaimablePeriod = lastClaimedPeriod + 1;
+         // if the next claimable period is before the start period, set it to the start period
+         if (nextClaimablePeriod < startPeriod) {
+             nextClaimablePeriod = startPeriod;
+@@ -916,7 +924,7 @@ contract Stargate is
+         if (
+             endPeriod != type(uint32).max &&
+             endPeriod < currentValidatorPeriod &&
+-            endPeriod > nextClaimablePeriod
++            endPeriod >= nextClaimablePeriod
+         ) {
+             return (nextClaimablePeriod, endPeriod);
+         }

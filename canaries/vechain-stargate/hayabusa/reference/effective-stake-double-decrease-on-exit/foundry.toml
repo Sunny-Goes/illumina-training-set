@@ -1,0 +1,21 @@
+# Foundry project for vechain-stargate PoC experiments — soldeer-managed deps.
+[profile.default]
+src = "src"
+out = "out"
+test = "test"
+solc_version = "0.8.20"
+libs = ["dependencies", "lib"]
+remappings = [
+    "forge-std/=dependencies/forge-std-1.9/src/",
+    "target/=lib/target/",
+    "@openzeppelin/contracts/=dependencies/openzeppelin-contracts-5.0.2/contracts/",
+    "@openzeppelin/contracts-upgradeable/=dependencies/openzeppelin-contracts-upgradeable-5.0.2/contracts/",
+]
+
+[dependencies]
+forge-std = { version = "1.9", git = "https://github.com/foundry-rs/forge-std", rev = "3b20d60d14b343ee4f908cb8079495c07f5e8981" }
+openzeppelin-contracts = { version = "5.0.2", git = "https://github.com/OpenZeppelin/openzeppelin-contracts", rev = "dbb6104ce834628e473d2173bbc9d47f81a9eec3" }
+openzeppelin-contracts-upgradeable = { version = "5.0.2", git = "https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable", rev = "b17897bbe78bc67fbc12a69bd69fead784a4547c" }
+
+[soldeer]
+remappings_generate = false  # remappings above are manual (forge-std needs its /src segment)

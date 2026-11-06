@@ -164,3 +164,44 @@ One per canary directory. Template — see `canaries/vechain-stargate/hayabusa/R
 - [ ] `ci/certify.sh` CERTIFIED; specificity matrix recorded
 - [ ] README written from the §8 template; dropped candidates recorded
 - [ ] disclosure rule honored — nothing in the repo is live-and-unpatched
+
+## 9. Schema reference
+
+One canary directory per codebase-at-commit: `canaries/<codebase>/<snapshot>/`.
+The lab validates both files with `extra="forbid"` — an unknown field fails loud at load time.
+
+### `canary.json` — the pointer (leak-safe; what the execution side may see)
+
+| field | required | semantics |
+|---|---|---|
+| `id` | yes | `<codebase>-<snapshot>`, kebab-case; must equal the directory path |
+| `pack` | yes | the azimo pack this canary binds to (kebab) |
+| `target` | yes | the pack's target manifest name (kebab) |
+| `snapshot_sha` | yes | full 40-hex commit of the codebase at the pin; cross-checked against the engine's target manifest |
+| `links` | no | provenance URLs (upstream repo first — certification reads `links[0]` as the fetch remote) |
+| `notes` | no | free text |
+
+Never a `bugs` key — the split is enforced: a `canary.json` carrying ground truth fails loudly.
+
+Certification-side, optional (used by `ci/certify.sh` reconstruction): `target_subdir` — the
+in-repo subtree materialized as the workspace target (default `barretenberg/sol`; vechain:
+`packages/contracts`). *Pending a lab schema addition; today it is certification metadata only.*
+
+### `bugs.json` — the ground truth (judge-side only)
+
+A list of rows:
+
+| field | required | semantics |
+|---|---|---|
+| `id` | yes | kebab-case; unique within the canary |
+| `files` | yes | ≥1 repo-relative paths of the vulnerable files at the snapshot (root cause *and* manifestation) |
+| `severity` | no | Immunefi vocabulary: `critical`/`high`/`medium`/`low`/`informational` (empty = unrecorded) |
+| `win` | no | the reward-table row expected to catch it (Immunefi-style impact id); cross-checked against the pack's win table |
+| `source` | no | provenance: report ids/links, audit name, or "seeded" + fork commit |
+| `notes` | no | the mechanism in one sentence |
+| `fix` | attribution | repo-relative fix patch (§4); empty = not counterfactually attributable |
+| `reference_poc` | certification | directory with the forge PoC (§6); empty = uncertified |
+| `sites` | no | list of `{file, lines, kind, function}` — §5; `lines` are 1-based `[start, end]` ranges in the pre-fix snapshot |
+
+Attribution needs `fix`; certification needs `fix` + `reference_poc`. A row with neither is a
+recorded-but-unverifiable bug — allowed, flagged in the README.

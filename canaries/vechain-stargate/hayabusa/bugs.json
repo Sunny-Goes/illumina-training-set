@@ -1,0 +1,32 @@
+[
+  {
+    "id": "effective-stake-double-decrease-on-exit",
+    "files": ["contracts/Stargate.sol"],
+    "severity": "high",
+    "win": "permanent-freezing-of-funds",
+    "source": "Immunefi Audit Comp | VeChain | Stargate Hayabusa (2025-11) — ~25 reports, e.g. #59386 (@humanitia), #59564, #59723, #59727, #60004, #60334 — https://github.com/immunefi-team/Past-Audit-Competitions/tree/main/vechain-or-stargate-hayabusa",
+    "notes": "Stargate.sol:unstake/_delegate — when a delegator requested exit and the validator later exits, delegatorsEffectiveStake is decreased twice; the second subtraction underflows and unstake reverts permanently. Fixed in f7d2259b (guard + _hasRequestedExit helper + floor-at-zero — the floor is what kills the revert).",
+    "fix": "fixes/effective-stake-double-decrease-on-exit.patch",
+    "reference_poc": "reference/effective-stake-double-decrease-on-exit",
+    "sites": [
+      {"file": "contracts/Stargate.sol", "lines": [[264, 271]], "kind": "modified", "function": "unstake"},
+      {"file": "contracts/Stargate.sol", "lines": [[396, 403]], "kind": "modified", "function": "_delegate"},
+      {"file": "contracts/Stargate.sol", "lines": [[694, 714]], "kind": "modified", "function": "hasRequestedExit"},
+      {"file": "contracts/Stargate.sol", "lines": [[1004, 1012]], "kind": "modified", "function": "_updatePeriodEffectiveStake"}
+    ]
+  },
+  {
+    "id": "claimable-periods-off-by-one-post-exit",
+    "files": ["contracts/Stargate.sol"],
+    "severity": "high",
+    "win": "theft-of-unclaimed-yield",
+    "source": "Immunefi Audit Comp | VeChain | Stargate Hayabusa (2025-11) — ~24 reports, e.g. #59316, #59358, #59361 (@humanitia et al.), #59563 — https://github.com/immunefi-team/Past-Audit-Competitions/tree/main/vechain-or-stargate-hayabusa",
+    "notes": "Stargate.sol:_claimableDelegationPeriods — the endPeriod > nextClaimablePeriod boundary skips the ended-delegation branch when equal, so claims run up to the validator's completedPeriods and pay post-exit periods. Fixed in f7d2259b (endPeriod <= lastClaimedPeriod guard + >= boundary + cursor advance on zero-claims).",
+    "fix": "fixes/claimable-periods-off-by-one-post-exit.patch",
+    "reference_poc": "reference/claimable-periods-off-by-one-post-exit",
+    "sites": [
+      {"file": "contracts/Stargate.sol", "lines": [[755, 768]], "kind": "modified", "function": "_claimRewards"},
+      {"file": "contracts/Stargate.sol", "lines": [[902, 922]], "kind": "modified", "function": "_claimableDelegationPeriods"}
+    ]
+  }
+]

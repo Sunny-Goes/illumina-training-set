@@ -1,0 +1,99 @@
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.20;
+
+import {Test} from "forge-std/Test.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Stargate} from "target/contracts/Stargate.sol";
+import {StargateNFTMock} from "target/contracts/mocks/StargateNFTMock.sol";
+import {ProtocolStakerMock} from "target/contracts/mocks/ProtocolStakerMock.sol";
+import {MyERC20} from "target/contracts/mocks/MyERC20.sol";
+import {DataTypes} from "target/contracts/StargateNFT/libraries/DataTypes.sol";
+
+/// Reference PoC for vechain-stargate/hayabusa — double_decrease_locks_unstake (see README.md).
+/// Convention: each test PASSES while its bug is present and FAILS once the bug's
+/// fix patch is applied (the counterfactual-attribution contract).
+contract PocTest is Test {
+    address internal constant VTHO = 0x0000000000000000000000000000456E65726779;
+
+    ProtocolStakerMock internal staker;
+    StargateNFTMock internal nft;
+    Stargate internal stargate;
+
+    address internal alice = address(0xA11CE);
+    address internal bob = address(0xB0B);
+    address internal validator = address(0xBA111);
+
+    function setUp() public {
+        staker = new ProtocolStakerMock();
+        nft = new StargateNFTMock();
+
+        Stargate impl = new Stargate();
+        Stargate.InitializeV1Params memory params = Stargate.InitializeV1Params({
+            admin: address(this),
+            protocolStakerContract: address(staker),
+            stargateNFTContract: address(nft),
+            maxClaimablePeriods: 832
+        });
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(impl), abi.encodeCall(Stargate.initialize, (params))
+        );
+        stargate = Stargate(payable(address(proxy)));
+        staker.helper__setStargate(address(stargate));
+
+        // VTHO is a vechain builtin at a fixed address: etch a mock ERC20 there
+        // and fund the Stargate contract's reward pool.
+        MyERC20 vthoImpl = new MyERC20(address(this), address(this));
+        vm.etch(VTHO, address(vthoImpl).code);
+        MyERC20(VTHO).mint(address(stargate), 1_000_000 ether);
+
+        // one staking level: 1 VET in, effective stake 1:1
+        nft.helper__setLevel(DataTypes.Level({
+            name: "Thunder",
+            isX: false,
+            id: 1,
+            maturityBlocks: 0,
+            scaledRewardFactor: 100,
+            vetAmountRequiredToStake: 1 ether
+        }));
+        nft.helper__setToken(DataTypes.Token({
+            tokenId: 0,
+            levelId: 1,
+            mintedAtBlock: 0,
+            vetAmountStaked: 1 ether,
+            lastVetGeneratedVthoClaimTimestamp_deprecated: 0
+        }));
+
+        staker.addValidation(validator, 1);
+        staker.helper__setValidatorStatus(validator, ProtocolStakerMock.ValidatorStatus.ACTIVE);
+
+        vm.deal(alice, 10 ether);
+        vm.deal(bob, 10 ether);
+    }
+
+    function _stakeAndDelegate(address who) internal returns (uint256 tokenId) {
+        vm.prank(who);
+        tokenId = stargate.stake{value: 1 ether}(1);
+        vm.prank(who);
+        stargate.delegate(tokenId, validator);
+    }
+
+    /// Bug A: double decrease of delegatorsEffectiveStake — delegator requests exit,
+    /// then the validator exits; unstake subtracts the stake twice and underflows,
+    /// permanently locking the funds. Vulnerable: unstake reverts (panic 0x11).
+    /// Fixed (`!_hasRequestedExit` guard): unstake succeeds and the test fails.
+    function test_double_decrease_locks_unstake() public {
+        uint256 tokenId = _stakeAndDelegate(alice);
+
+        // let the delegation become ACTIVE (started) before requesting exit
+        staker.helper__setValidationCompletedPeriods(validator, 2);
+
+        vm.prank(alice);
+        stargate.requestDelegationExit(tokenId); // decrease #1 at period 4
+
+        staker.helper__setValidatorStatus(validator, ProtocolStakerMock.ValidatorStatus.EXITED);
+
+        vm.prank(alice);
+        vm.expectRevert(); // arithmetic underflow on decrease #2
+        stargate.unstake(tokenId);
+    }
+}

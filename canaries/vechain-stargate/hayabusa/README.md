@@ -128,7 +128,22 @@ real CLI (`illumina-lab counterfactual`):
 `StargateNFT.sol` carries 15 findings and a 783-line refactor in `f7d2259b` — candidates for a
 second snapshot or an extended canary later.
 
-## Not yet done here (item 4)
+## Certification — CERTIFIED 2026-11-06
 
-`canary.json`, `bugs.json`, `fixes/`, `reference/`, certification run. The pack for azimo (forge/
-component) is a separate lab-side task.
+Full reconstruction via `ci/certify.sh` (extended for this canary: `SUBDIR` env override,
+all-dependency fetch — vechain needs OpenZeppelin beyond forge-std, per-bug `test/` refresh):
+
+```
+SUBDIR=packages/contracts ci/certify.sh canaries/vechain-stargate/hayabusa
+→ effective-stake-double-decrease-on-exit — CERTIFIED (wins on vulnerable, dies on fixed)
+→ claimable-periods-off-by-one-post-exit — CERTIFIED (wins on vulnerable, dies on fixed)
+```
+
+Specificity matrix (from the spike): each patch kills exactly its own PoC; cross-pairs are
+`not-specific`. Both patches pass `git apply --check -p3 --directory lib/target` at the snapshot.
+
+## Status
+
+Canary data complete: `canary.json`, `bugs.json` (2 bugs), `fixes/`, `reference/`, certification
+green. **Not runnable yet**: the azimo pack/target (`vechain-stargate`/`hayabusa`) is v1 lab-side
+work (the forge/ component); the lab's crosscheck validates this entry once the pack exists.
