@@ -21,5 +21,10 @@ jobs:
         with:
           python-version: '3.12'
       # TODO: switch to @master once the lab's judge/counterfactual-poc branch merges.
-      - run: pip install "git+https://github.com/Sunny-Goes/illumina-lab.git@judge/counterfactual-poc"
+      # Clone without submodules: vendor/azimo is private, pip's recursive clone fails on it —
+      # and the judge CLI needs only the lab package itself.
+      - run: git clone --depth 1 --branch judge/counterfactual-poc https://github.com/Sunny-Goes/illumina-lab.git /tmp/illumina-lab
+      - run: pip install /tmp/illumina-lab
       - run: ci/certify.sh canaries/honk/precompile-success-unchecked
+      # TODO: drop the SUBDIR env once canary.json's target_subdir is in the lab schema
+      - run: SUBDIR=packages/contracts ci/certify.sh canaries/vechain-stargate/hayabusa

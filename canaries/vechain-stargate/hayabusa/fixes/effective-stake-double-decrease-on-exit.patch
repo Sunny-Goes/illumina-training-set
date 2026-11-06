@@ -1,0 +1,69 @@
+diff --git a/packages/contracts/contracts/Stargate.sol b/packages/contracts/contracts/Stargate.sol
+index 50818d5..098737f 100644
+--- a/packages/contracts/contracts/Stargate.sol
++++ b/packages/contracts/contracts/Stargate.sol
+@@ -264,8 +264,8 @@ contract Stargate is
+         // if the delegation is pending or the validator is exited or unknown
+         // decrease the effective stake of the previous validator
+         if (
+-            currentValidatorStatus == VALIDATOR_STATUS_EXITED ||
+-            delegation.status == DelegationStatus.PENDING
++            (currentValidatorStatus == VALIDATOR_STATUS_EXITED &&
++                !_hasRequestedExit($, _tokenId)) || delegation.status == DelegationStatus.PENDING
+         ) {
+             // get the completed periods of the previous validator
+             (, , , uint32 oldCompletedPeriods) = $
+@@ -396,8 +396,8 @@ contract Stargate is
+             // if the delegation is pending or the validator is exited or unknown
+             // decrease the effective stake of the previous validator
+             if (
+-                currentValidatorStatus == VALIDATOR_STATUS_EXITED ||
+-                status == DelegationStatus.PENDING
++                (currentValidatorStatus == VALIDATOR_STATUS_EXITED &&
++                    !_hasRequestedExit($, _tokenId)) || status == DelegationStatus.PENDING
+             ) {
+                 // get the completed periods of the previous validator
+                 (, , , uint32 oldCompletedPeriods) = $
+@@ -694,6 +694,13 @@ contract Stargate is
+     /// @inheritdoc IStargate
+     function hasRequestedExit(uint256 _tokenId) external view returns (bool) {
+         StargateStorage storage $ = _getStargateStorage();
++        return _hasRequestedExit($, _tokenId);
++    }
++
++    function _hasRequestedExit(
++        StargateStorage storage $,
++        uint256 _tokenId
++    ) private view returns (bool) {
+ 
+         // get end period of the delegation
+         uint256 delegationId = $.delegationIdByTokenId[_tokenId];
+@@ -705,10 +712,11 @@ contract Stargate is
+ 
+         // Fetch only the period details (single external call)
+         (, uint32 endPeriod) = $.protocolStakerContract.getDelegationPeriodDetails(delegationId);
++        DelegationStatus status = _getDelegationStatus($, _tokenId);
+ 
+         // endPeriod is set to type(uint32).max when delegation is created
+         // It changes to a specific period number when exit is requested
+-        return endPeriod != type(uint32).max;
++        return endPeriod != type(uint32).max && status != DelegationStatus.EXITED;
+     }
+ 
+     /// @inheritdoc IStargate
+@@ -1004,9 +1012,12 @@ contract Stargate is
+         uint256 currentValue = $.delegatorsEffectiveStake[_validator].upperLookup(_period);
+ 
+         // calculate the updated effective stake
+-        uint256 updatedValue = _isIncrease
+-            ? currentValue + effectiveStake
+-            : currentValue - effectiveStake;
++        uint256 updatedValue;
++        if (_isIncrease) {
++            updatedValue = currentValue + effectiveStake;
++        } else {
++            updatedValue = currentValue > effectiveStake ? currentValue - effectiveStake : 0;
++        }
+ 
+         // push the updated effective stake
+         $.delegatorsEffectiveStake[_validator].push(_period, SafeCast.toUint224(updatedValue));

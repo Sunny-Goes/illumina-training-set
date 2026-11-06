@@ -1,0 +1,12 @@
+{
+  "id": "vechain-stargate-hayabusa",
+  "pack": "vechain-stargate",
+  "target": "hayabusa",
+  "snapshot_sha": "93eaa804fe6bdc0afc3edca3a17a89cb3c2365b0",
+  "links": [
+    "https://github.com/vechain/stargate-contracts",
+    "https://github.com/immunefi-team/audit-comp-vechain-stargate-hayabusa",
+    "https://immunefi.com/audit-competition/audit-comp-vechain-stargate-hayabusa/"
+  ],
+  "notes": "Historical canary from the VeChain Stargate Hayabusa audit competition (finished 2025-11). Snapshot == competition repo e9c0bc9b blob-for-blob. Certification fetches packages/contracts (SUBDIR env) from the upstream repo at the pin. The azimo pack/target do not exist yet — the lab's crosscheck validates once they land (v1)."
+}
