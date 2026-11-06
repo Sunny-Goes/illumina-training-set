@@ -23,3 +23,5 @@ jobs:
       # TODO: switch to @master once the lab's judge/counterfactual-poc branch merges.
       - run: pip install "git+https://github.com/Sunny-Goes/illumina-lab.git@judge/counterfactual-poc"
       - run: ci/certify.sh canaries/honk/precompile-success-unchecked
+      # TODO: drop the SUBDIR env once canary.json's target_subdir is in the lab schema
+      - run: SUBDIR=packages/contracts ci/certify.sh canaries/vechain-stargate/hayabusa

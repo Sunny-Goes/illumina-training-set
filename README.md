@@ -1,66 +1,114 @@
 # illumina-training-set
 
-Curated canary codebases for [illumina](https://github.com/Sunny-Goes/azimo) evaluation — the data repo consumed by [illumina-lab](https://github.com/Sunny-Goes/illumina-lab).
+Curated **canary codebases** for evaluating [illumina](https://github.com/Sunny-Goes/azimo), an
+automated smart-contract auditor — consumed by [illumina-lab](https://github.com/Sunny-Goes/illumina-lab),
+the evaluation harness.
 
-A **canary** is a codebase pinned at a snapshot commit where known, real bugs (from published audits and Immunefi programs) are provably present. This repo holds the curation: methodology, machine-readable ground truth, and the git pointer. The code itself lives in forks under this org (or upstream repos), fetched by SHA.
+## Why this exists
+
+To measure an automated auditor you need codebases where you *know* which bugs exist. A canary is
+such a codebase: a real protocol pinned at a commit where known bugs are **provably present** —
+found in the wild (published Immunefi competitions, audits), later patched, and curated here with
+the evidence to prove it. This repo holds the curation: the ground truth, the fix patches, known-good
+exploits, and the certification that ties them together. The audited code itself is fetched by
+commit SHA from its repo (a fork under this org, or upstream).
+
+## How it works, end to end
+
+```
+            this repo                          illumina-lab + illumina
+┌───────────────────────────┐
+│ 1. CURATE                 │   bugs.json (ground truth: files, severity, fix patch, sites)
+│    pick a codebase + a    │   canary.json (the pointer: snapshot commit, pack binding)
+│    commit where N known   │   fixes/    (one minimal patch per bug)
+│    bugs are present       │   reference/ (one known-good exploit per bug)
+│                           │
+│ 2. CERTIFY (CI)           │   per bug: replay the reference exploit on the pinned snapshot
+│    ci/certify.sh          │   → must WIN; replay with the fix applied → must DIE.
+│                           │   Red CI = the ground truth is wrong, never the auditor.
+└───────────┬───────────────┘
+            ▼
+│ 3. RUN                    │   illumina audits the pinned snapshot — it never sees anything
+│                           │   from step 1 (the leak rule, below).
+            ▼
+│ 4. JUDGE                  │   each PoC the auditor produced is replayed twice: on the
+│    the counterfactual     │   vulnerable snapshot and on the snapshot + each bug's fix.
+│    judge                  │   Wins unpatched + dies on bug X's fix ⇒ the PoC exploits bug X.
+└───────────────────────────┘
+```
+
+The judge is **counterfactual** — attribution is an experiment, not a guess: if an exploit stops
+working exactly when one bug's fix is applied, that exploit depended on that bug. No LLM, no
+fuzzy matching on code locations.
 
 ## What a canary carries
 
-One directory per canary, grouped by codebase:
+One directory per codebase-at-commit, `canaries/<codebase>/<snapshot>/`:
 
 ```
-canaries/<codebase>/<snapshot>/
-├── README.md       # methodology: why this codebase, bug sources (audit/Immunefi links),
-│                   # snapshot commit and date, how the bugs were validated present
-├── bugs.json       # machine-readable ground truth: per bug — id, files, severity,
-│                   # win-condition mapping, source, notes
-└── canary.json     # the binding: pack + target + snapshot sha — azimo's target manifest
-                    # owns repo/path/in-scope; the validator asserts the shas agree
+├── README.md       # the curation record: why this codebase, where each bug came from
+│                   # (report links, fix commits), how presence at the snapshot was verified,
+│                   # certification results — everything needed to re-derive the entry
+├── canary.json     # the pointer the lab may see: id, pack/target binding, snapshot SHA, links
+├── bugs.json       # the ground truth (judge-side only): per bug — id, files, severity,
+│                   # win-condition mapping, provenance, fix patch, sites, reference PoC
+├── fixes/          # one minimal patch per bug — applies cleanly at the snapshot
+└── reference/      # one known-good exploit per bug (a forge test that passes while the bug
+                    # is present and fails once fixed), with its own README
 ```
 
-A canary is one codebase at one commit. Snapshots group under `canaries/<codebase>/`
-so a codebase can carry several snapshots — e.g. when no single commit has all its
-known bugs coexisting, each snapshot carries the subset that does.
+`sites` per bug (`{file, lines, kind, function}`) locate the bug precisely at the snapshot —
+used for finer grading and coverage analysis. `lines` are 1-based ranges in the *pre-fix* code.
 
-## Bug entries v2 — counterfactual ground truth
+## Authoring a new canary
 
-Bug entries may carry additional optional fields supporting the lab's **counterfactual judge**
-(an agent's PoC is attributed to bug X when it wins on the vulnerable snapshot and *fails* on the
-same snapshot with X's fix applied — no LLM, no line matching):
+Read **[AUTHORING.md](AUTHORING.md)** — the mechanical, AI-executable methodology, with a
+checklist. Two tracks:
 
-- `fix` — path to a patch (relative to the canary dir) that repairs **only this bug** and applies
-  cleanly at the snapshot (`git apply --check`). For seeded canaries this is the revert of the seed
-  commit, restricted to the bug's files; for historical canaries, the fix commit's diff, backported
-  if needed. Fixes must be independently applicable on multi-bug snapshots.
-- `sites` — optional list of `{file, lines, kind, function}` locating the bug at the snapshot for
-  detection-level grading and coverage prefiltering. `lines` are 1-based inclusive ranges at the
-  snapshot. `kind`: `modified`/`deleted` (lines the fix changes or removes) or `context` (the fix
-  only *adds* code — e.g. a missing check — so the site is the unguarded region around the
-  insertion point). `function` is the enclosing function when known.
-- `reference_poc` — optional path to a curated, known-good exploit used to certify the canary
-  (wins on vulnerable, fails on patched) and to self-test the judge.
+- **historical** — curate real findings from a finished program (the reference implementation is
+  `canaries/vechain-stargate/hayabusa`, from VeChain's finished Immunefi competition);
+- **seeded** — plant a bug ourselves; the fix is the revert of the seed commit (reference:
+  `canaries/honk/*`).
 
-These fields are **judge-side ground truth**: `canary.json` is unchanged, execution stages never
-see them, and `fixes/` / `reference/` live outside every fetched sparse path, like `bugs.json`.
+## Certification
 
-## Certification (CI)
+`ci/certify.sh <canary-dir>` certifies every bug that carries a fix and a reference exploit:
+win on vulnerable, die on fixed — verified by rebuilding the workspace from nothing but the
+canary data (the snapshot subtree fetched at the pinned SHA, dependencies at pinned revisions).
+The GitHub workflow runs it on every change under `canaries/**` — ground truth is a validated
+artifact, not prose.
 
-`ci/certify.sh <canary-dir>` certifies every bug carrying `fix` + `reference_poc`: the reference
-exploit must win on the vulnerable snapshot and die on the fixed variant (the lab's
-`illumina-lab counterfactual` verdict must be `confirmed`). It reconstructs a Foundry
-workspace from the canary data alone (sparse, blob-filtered fetch of the snapshot + forge-std at
-the pinned rev) and replays on scratch copies — no archived artifacts needed, no LLM. The GitHub
-workflow `.github/workflows/certify.yml` runs it on changes to `canaries/**` or `ci/**` and makes
-ground truth a validated artifact instead of curation prose. Locally, `CERTIFY_WORKSPACE=<dir>`
-skips reconstruction for a fast check against an existing PoC workspace; `LAB_CMD` overrides how
-the lab CLI is invoked (e.g. `uv run --directory /path/to/illumina-lab illumina-lab`).
+Run it locally (needs [foundry](https://getfoundry.sh) and Python 3):
+
+```bash
+# with the lab CLI installed (pip install git+https://github.com/Sunny-Goes/illumina-lab.git):
+ci/certify.sh canaries/vechain-stargate/hayabusa
+
+# fast path against an existing PoC workspace; LAB_CMD points at a local lab checkout:
+CERTIFY_WORKSPACE=/path/to/workspace LAB_CMD="uv run --directory /path/to/illumina-lab illumina-lab" \
+  ci/certify.sh canaries/honk/precompile-success-unchecked
+```
+
+`SUBDIR` overrides which in-repo subtree becomes the audit target (default: `target_subdir` in
+canary.json, else `barretenberg/sol`); `STRIP`/`TARGET_DIR` tune patch application.
 
 ## The rules
 
-- **Coexistence is proven, not trusted.** Every bug's pre-fix hunk must appear verbatim at the snapshot commit — checked mechanically, per bug.
-- **Ground truth is unreachable by the detector.** This documentation never lives inside the code's fetched scope, and the pinned snapshot commit predates the documentation commit in the fork.
+- **Presence is proven, not trusted.** Every shortlisted bug is trigger-verified at the snapshot
+  (a code shape is not enough), and its fix patch must apply cleanly at the pin.
+- **Ground truth never reaches the auditor.** `bugs.json`, `fixes/`, `reference/` are judge-side:
+  they live outside every fetched code path, and the snapshot predates any documentation of the
+  bugs in the fetched repos. `canary.json` carries no ground truth — a `bugs` key there fails loudly.
+- **Disclosure.** Nothing here is live-and-unpatched: only finished programs and deployed fixes.
 - **Forks for durability.** Upstream pins are allowed, but a SHA that stops being reachable gets forked.
 
 ## Status
 
-Four seeded dev-target entries for illumina-lab v0, under `canaries/honk/` (`honk-canonical-no-field-check`, `honk-precompile-success-unchecked`, `honk-msm-loop-past-bounds`, `honk-all-canaries` — four snapshots of the one codebase, since azimo seeded its bugs on four branches) — methodology-lite, transcribed from azimo's live canary suite. The first audit-derived canary (plether) is curated as part of illumina-lab v1.
+- `canaries/honk/` — four seeded dev-target entries (`honk-canonical-no-field-check`,
+  `honk-precompile-success-unchecked`, `honk-msm-loop-past-bounds`, `honk-all-canaries`),
+  transcribed from azimo's live canary suite. Seeded-track reference.
+- `canaries/vechain-stargate/hayabusa` — the first **historical** canary: VeChain Stargate from
+  the finished Immunefi audit competition (2025-11), 2 certified bugs (high severity, ~49 deduped
+  reports), full curation record in its README. Historical-track reference implementation.
+- Next: `hayabusa-r2` (the release-introduced bug F-2026-14785 lives there), then plether once its
+  competition fixes are public — plether is also prism-era in size.
